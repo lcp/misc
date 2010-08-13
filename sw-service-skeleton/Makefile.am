@@ -9,5 +9,5 @@ dist_servicesdata_DATA = #service#.png
 
 servicesdata_DATA = #service#.keys
 CLEANFILES = #service#.keys
-EXTRA_DIST = #serivce#.keys.in
+EXTRA_DIST = #service#.keys.in
 @INTLTOOL_SOCIALWEB_KEYS@

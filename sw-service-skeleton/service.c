@@ -234,7 +234,7 @@ sw_service_#service#_class_init (SwService#Service#Class *klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
   SwServiceClass *service_class = SW_SERVICE_CLASS (klass);
 
-  g_type_class_add_private (klass, sizeof (SwService#Servuce#Private));
+  g_type_class_add_private (klass, sizeof (SwService#Service#Private));
 
   object_class->dispose = sw_service_#service#_dispose;
   object_class->finalize = sw_service_#service#_finalize;
