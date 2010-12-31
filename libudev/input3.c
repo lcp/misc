@@ -43,10 +43,8 @@ int main()
 
         /* The parent device contains the name, VID, and PID and could be useful. */
         parent_dev = udev_device_get_parent_with_subsystem_devtype(dev, "input", 0);
-        if (!parent_dev) {
-            udev_device_unref(parent_dev);
+        if (!parent_dev)
             continue;
-        }
 
         /* Information from the device node */
         printf("Device Node Path: %s\n", path);
