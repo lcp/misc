@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<settings version="0.1">
+
+  <device>
+    <match key="product_version" string="ThinkPad X200">
+      <append key="key_control" type="bool">true</append>
+      <append key="master_key" type="bool">false</append>
+      <append key="force_sync" type="bool">true</append>
+    </match>
+  </device>
+
+</settings>
