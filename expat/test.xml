@@ -4,9 +4,9 @@
 
   <device>
     <match key="product_version" string="ThinkPad X200">
-      <append key="key_control" type="bool">true</append>
-      <append key="master_key" type="bool">false</append>
-      <append key="force_sync" type="bool">true</append>
+      <option key="key_control" type="bool">true</option>
+      <option key="master_key" type="bool">false</option>
+      <option key="force_sync" type="bool">true</option>
     </match>
   </device>
 
