@@ -5,7 +5,25 @@
 typedef struct {
 	int depth;
 	int bound;
+	int option;
 } Data;
+
+void
+expat_xml_cdata_handler (void *data,
+			 const char *cdata,
+			 int len)
+{
+	Data *ptr = (Data *)data;
+	char *printable = NULL;
+
+	if (ptr->option == 0)
+		return;
+
+	printable = g_strndup (cdata, len);
+	g_print ("len = %d cdata: %s\n", len, printable);
+	g_free (printable);
+	ptr->option = 0;
+}
 
 void
 expat_xml_start_element (void *data,
@@ -27,6 +45,11 @@ expat_xml_start_element (void *data,
 /**
  * End - Take care the depth and bound
  **/
+
+	if (g_strcmp0 (name, "option") == 0)
+		ptr->option = 1;
+	else
+		ptr->option = 0;
 
 	g_print ("== Start ==\n");
 	g_print ("tag = %s , depth = %d, bound = %d\n", name, ptr->depth, ptr->bound);
@@ -85,12 +108,15 @@ expat_xml_parse (const char *content)
 
 	data.depth = 0;
 	data.bound = data.depth + 1;
+	data.option = 0;
 
 	parser = XML_ParserCreate (NULL);
 	XML_SetUserData (parser, (void *)&data);
 	XML_SetElementHandler (parser,
 			       expat_xml_start_element,
 			       expat_xml_end_element);
+	XML_SetCharacterDataHandler (parser,
+				     expat_xml_cdata_handler);
 	len = strlen (content);
 
 	if (XML_Parse (parser, content, len, 1) == XML_STATUS_ERROR) {
