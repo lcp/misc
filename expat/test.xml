@@ -1,13 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<settings version="0.1">
+<profile version="0.1">
 
   <device>
-    <match key="product_version" string="ThinkPad X200">
-      <option key="key_control" type="bool">true</option>
-      <option key="master_key" type="bool">false</option>
-      <option key="force_sync" type="bool">true</option>
+    <match key="product_version" string_outof="x60;x201;x2010;ThinkPad X200">
+      <match key="product_version" contains="X200">
+        <match key="product_version" contains_ncase="x200">
+          <match key="product_version" contains_outof="X200;X60;X201;X2010;">
+            <match key="product_version" contains_not="X60">
+              <match key="product_version" prefix="ThinkPad">
+                <match key="product_version" prefix_ncase="thinkpad">
+                  <match key="product_version" prefix_outof="ThinkPad;IdeaPad;">
+                    <match key="product_version" suffix="X200">
+                      <match key="product_version" suffix_ncase="x200">
+                        <match key="product_version" suffix_outof="X60;X30;X31;X200">
+                          <match key="sys_vendor" string="LENOVO">
+                            <option key="key_control" type="bool">false</option>
+                            <option key="master_key" type="bool">true</option>
+                            <option key="force_sync" type="bool">true</option>
+                          </match>
+                        </match>
+                      </match>
+                    </match>
+                  </match>
+                </match>
+              </match>
+            </match>
+          </match>
+        </match>
+      </match>
     </match>
   </device>
 
-</settings>
+</profile>
