@@ -42,8 +42,15 @@ enum
 	OPER_PREFIX_OUTOF,
 	OPER_SUFFIX,
 	OPER_SUFFIX_NCASE,
+	OPER_SUFFIX_OUTOF,
 	OPER_UNKNOWN,
 };
+
+typedef struct {
+	gboolean key_control;
+	gboolean master_key;
+	gboolean force_sync;
+} Options;
 
 typedef struct {
 	DmiInfo *hardware_info;
@@ -54,19 +61,14 @@ typedef struct {
 	int opt;
 	int opt_type;
 
-	/* result */
-	gboolean key_control;
-	gboolean master_key;
-	gboolean force_sync;
+	Options options;
 } ParseInfo;
 
 #define URF_CONFIG_GET_PRIVATE(obj) (obj)->priv
 
 typedef struct{
 	char *user;
-	gboolean key_control;
-	gboolean master_key;
-	gboolean force_sync;
+	Options options;
 } UrfConfigPrivate;
 
 typedef struct {
@@ -157,36 +159,118 @@ get_operator (const char *operator)
 		return OPER_SUFFIX;
 	else if (g_strcmp0 (operator, "suffix_ncase") == 0)
 		return OPER_SUFFIX_NCASE;
+	else if (g_strcmp0 (operator, "suffix_outof") == 0)
+		return OPER_SUFFIX_OUTOF;
 	return OPER_UNKNOWN;
 }
 
 static gboolean
 match_rule (const char *str1,
-	    int operator,
+	    const int operator,
 	    const char *str2)
 {
 	gboolean match = FALSE;
+	char **token;
+	char *str1_lower;
+	char *str2_lower;
+	int i;
+
+	if (strlen (str1) < 1 || strlen (str2) < 1)
+		return FALSE;
 
 	switch (operator) {
 	case OPER_STRING:
 		if (g_strcmp0 (str1, str2) == 0)
 			match = TRUE;
 		break;
-	/* TODO complete other operators */
 	case OPER_STRING_OUTOF:
+		token = g_strsplit (str2, ";", 0);
+		for (i = 0; token[i]; i++) {
+			if (g_strcmp0 (str1, token[i]) == 0) {
+				match = TRUE;
+				break;
+			}
+		}
+		g_strfreev (token);
+		break;
 	case OPER_CONTAINS:
+		if (g_strrstr (str1, str2))
+			match = TRUE;
+		break;
 	case OPER_CONTAINS_NCASE:
+		str1_lower = g_ascii_strdown (str1, -1);
+		str2_lower = g_ascii_strdown (str2, -1);
+		if (g_strrstr (str1_lower, str2_lower))
+			match = TRUE;
+		g_free (str1_lower);
+		g_free (str2_lower);
+		break;
 	case OPER_CONTAINS_NOT:
+		if (g_strrstr (str1, str2) == NULL)
+			match = TRUE;
+		break;
 	case OPER_CONTAINS_OUTOF:
+		token = g_strsplit (str2, ";", 0);
+		for (i = 0; token[i]; i++) {
+			if (strlen (token[i]) < 1) {
+				continue;
+			} else if (g_strrstr (str1, token[i])) {
+				match = TRUE;
+				break;
+			}
+		}
+		g_strfreev (token);
+		break;
 	case OPER_PREFIX:
+		if (g_str_has_prefix (str1, str2))
+			match = TRUE;
+		break;
 	case OPER_PREFIX_NCASE:
+		str1_lower = g_ascii_strdown (str1, -1);
+		str2_lower = g_ascii_strdown (str2, -1);
+		if (g_str_has_prefix (str1_lower, str2_lower))
+			match = TRUE;
+		g_free (str1_lower);
+		g_free (str2_lower);
+		break;
 	case OPER_PREFIX_OUTOF:
+		token = g_strsplit (str2, ";", 0);
+		for (i = 0; token[i]; i++) {
+			if (strlen (token[i]) < 1) {
+				continue;
+			} else if (g_str_has_prefix (str1, token[i])) {
+				match = TRUE;
+				break;
+			}
+		}
+		g_strfreev (token);
+		break;
 	case OPER_SUFFIX:
+		if (g_str_has_suffix (str1, str2))
+			match = TRUE;
+		break;
 	case OPER_SUFFIX_NCASE:
-	case OPER_UNKNOWN:
-		match = FALSE;
+		str1_lower = g_ascii_strdown (str1, -1);
+		str2_lower = g_ascii_strdown (str2, -1);
+		if (g_str_has_suffix (str1_lower, str2_lower))
+			match = TRUE;
+		g_free (str1_lower);
+		g_free (str2_lower);
+		break;
+	case OPER_SUFFIX_OUTOF:
+		token = g_strsplit (str2, ";", 0);
+		for (i = 0; token[i]; i++) {
+			if (strlen (token[i]) < 1) {
+				continue;
+			} else if (g_str_has_suffix (str1, token[i])) {
+				match = TRUE;
+				break;
+			}
+		}
+		g_strfreev (token);
 		break;
 	default:
+		match = FALSE;
 		break;
 	}
 
@@ -209,24 +293,24 @@ parse_xml_cdata_handler (void       *data,
 	switch (info->opt) {
 	case OPT_KEY_CONTROL:
 		if (g_ascii_strcasecmp (str, "TRUE") == 0)
-			info->key_control = TRUE;
+			info->options.key_control = TRUE;
 		else if (g_ascii_strcasecmp (str, "FALSE") == 0)
-			info->key_control = FALSE;
-g_debug ("** assign key_control to %d", info->key_control);
+			info->options.key_control = FALSE;
+g_debug ("** assign key_control to %d", info->options.key_control);
 		break;
 	case OPT_MASTER_KEY:
 		if (g_ascii_strcasecmp (str, "TRUE") == 0)
-			info->master_key = TRUE;
+			info->options.master_key = TRUE;
 		else if (g_ascii_strcasecmp (str, "FALSE") == 0)
-			info->master_key = FALSE;
-g_debug ("** assign master_key to %d", info->master_key);
+			info->options.master_key = FALSE;
+g_debug ("** assign master_key to %d", info->options.master_key);
 		break;
 	case OPT_FORCE_SYNC:
 		if (g_ascii_strcasecmp (str, "TRUE") == 0)
-			info->force_sync = TRUE;
+			info->options.force_sync = TRUE;
 		else if (g_ascii_strcasecmp (str, "FALSE") == 0)
-			info->force_sync = FALSE;
-g_debug ("** assign force_sync to %d", info->force_sync);
+			info->options.force_sync = FALSE;
+g_debug ("** assign force_sync to %d", info->options.force_sync);
 		break;
 	default:
 		break;
@@ -242,8 +326,8 @@ parse_xml_start_element (void       *data,
 	const char *key = NULL;
 	const char *type = NULL;
 	const char *match_key = NULL;
-	const char *operator = NULL;
 	const char *match_body = NULL;
+	int operator;
 	int i;
 
 	info->xml_depth++;
@@ -255,10 +339,7 @@ parse_xml_start_element (void       *data,
 
 	info->opt = OPT_NONE;
 	info->opt_type = OPT_TYPE_NONE;
-/**
- * TODO parse the file
- *  if a rule is matched, go on. Otherwise, return immediately.
- **/
+
 g_debug ("== Start == tag = %s , depth = %d, bound = %d", name, info->xml_depth, info->xml_bound);
 g_debug ("attribute:");
 
@@ -269,19 +350,19 @@ g_debug ("attribute:");
 					continue;
 				key = atts[i+1];
 				i++;
-			} else if (g_strcmp0 (atts[i], "string") == 0) {
+			} else if ((operator = get_operator (atts[i])) != OPER_UNKNOWN) {
 				if (!atts[i+1])
 					continue;
-				operator = atts[i];
 				match_body = atts[i+1];
 				i++;
 			}
 		}
 
 		match_key = get_match_key (info->hardware_info, key);
-		if (!match_rule (match_key, get_operator (operator), match_body))
+g_debug ("  %s, %d, %s", key, operator, match_body);
+		if (!match_rule (match_key, operator, match_body))
 			return;
-g_debug ("  %s, %s, %s", key, operator, match_body);
+g_debug ("  MATCHED!");
 	} else if (g_strcmp0 (name, "option") == 0) {
 		for (i = 0; atts[i]; i++) {
 			if (g_strcmp0 (atts[i], "key") == 0) {
@@ -324,12 +405,13 @@ g_debug ("== END == tag = %s , depth = %d, bound = %d", name, info->xml_depth, i
 	info->xml_depth--;
 }
 
-void
+static gboolean
 urf_config_profile_xml_parse (UrfConfig  *config,
+			      DmiInfo    *hardware_info,
+			      Options    *options,
 			      const char *filename)
 {
 	UrfConfigPrivate *priv = config->priv;
-	DmiInfo *hardware_info = NULL;
 	ParseInfo *info;
 	XML_Parser parser;
 	char *content;
@@ -338,22 +420,18 @@ urf_config_profile_xml_parse (UrfConfig  *config,
 
 	if (!g_file_get_contents (filename, &content, &length, NULL)) {
 		g_debug ("Failed to read %s\n", filename);
-		return;
+		return FALSE;
 	}
-
-	hardware_info = get_dmi_info ();
-	if (hardware_info == NULL)
-		return;
 
 	info = g_new0 (ParseInfo, 1);
 	info->hardware_info = hardware_info;
-	info->key_control = priv->key_control;
-	info->master_key = priv->master_key;
-	info->force_sync = priv->force_sync;
 	info->xml_depth = 0;
 	info->xml_bound = 1;
 	info->opt = OPT_NONE;
 	info->opt_type = OPT_TYPE_NONE;
+	info->options.key_control = priv->options.key_control;
+	info->options.master_key = priv->options.master_key;
+	info->options.force_sync = priv->options.force_sync;
 
 	parser = XML_ParserCreate (NULL);
 	XML_SetUserData (parser, (void *)info);
@@ -365,20 +443,20 @@ urf_config_profile_xml_parse (UrfConfig  *config,
 	len = strlen (content);
 
 	if (XML_Parse (parser, content, len, 1) == XML_STATUS_ERROR) {
-		g_warning ("Settings File Parse error: %s\n", filename);
+		g_warning ("Profile Parse error: %s\n", filename);
 		XML_ParserFree (parser);
 		g_free (info);
-		return;
+		return FALSE;
 	}
 
 	XML_ParserFree (parser);
 
-	priv->key_control = info->key_control;
-	priv->master_key = info->master_key;
-	priv->force_sync = info->force_sync;
+	options->key_control = info->options.key_control;
+	options->master_key = info->options.master_key;
+	options->force_sync = info->options.force_sync;
 
 	g_free (info);
-	return;
+	return TRUE;
 }
 
 int
@@ -388,15 +466,19 @@ main (int argc, char *argv[])
 	gboolean ret;
 	UrfConfig *config;
 	UrfConfigPrivate *priv;
+	DmiInfo *hardware_info = NULL;
+	Options *options = NULL;
 
 	config = g_new0 (UrfConfig, 1);
 	config->priv = g_new0 (UrfConfigPrivate, 1);
 	priv = URF_CONFIG_GET_PRIVATE (config);
 
 	priv->user = "root";
-	priv->key_control = TRUE;
-	priv->master_key = FALSE;
-	priv->force_sync = FALSE;
+	priv->options.key_control = TRUE;
+	priv->options.master_key = FALSE;
+	priv->options.force_sync = FALSE;
+
+	options = g_new0 (Options, 1);
 
 	if (argc < 2) {
 		return -1;
@@ -404,12 +486,15 @@ main (int argc, char *argv[])
 
 	filename = argv[1];
 
-	urf_config_profile_xml_parse (config, filename);
+	hardware_info = get_dmi_info ();
+	if (hardware_info)
+		urf_config_profile_xml_parse (config, hardware_info, options, filename);
+	g_free (hardware_info);
 
 	g_debug ("key_control = %d, master_key = %d, force_sync = %d",
-		 priv->key_control,
-		 priv->master_key,
-		 priv->force_sync);
+		 options->key_control,
+		 options->master_key,
+		 options->force_sync);
 
 	return 0;
 }
