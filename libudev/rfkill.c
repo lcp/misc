@@ -11,27 +11,46 @@ gcc -Wall -o rfkill -ggdb -ludev rfkill.c
 
 #include <libudev.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define RFKILL0 "/sys/class/rfkill/rfkill0"
 
 int main()
 {
     struct udev *udev;
+    struct udev_enumerate *enumerate;
+    struct udev_list_entry *devices;
+    struct udev_list_entry *dev_list_entry;
     struct udev_device *dev;
     struct udev_device *parent_dev;
     struct udev_device *grandparent_dev;
+
+    int index = 0;
 
     udev = udev_new ();
     if (!udev) {
         printf ("Cannot create udev\n");
         return -1;
     }
+    enumerate = udev_enumerate_new(udev);
+    udev_enumerate_add_match_subsystem(enumerate, "rfkill");
+    udev_enumerate_scan_devices(enumerate);
+    devices = udev_enumerate_get_list_entry(enumerate);
 
-    dev = udev_device_new_from_syspath (udev, RFKILL0);
-    if (!dev) {
-        printf ("Failed to get device for %s\n", RFKILL0);
-        return -1;
+    udev_list_entry_foreach(dev_list_entry, devices) {
+        const char *path, *index_c;
+        path = udev_list_entry_get_name(dev_list_entry);
+        dev = udev_device_new_from_syspath(udev, path);
+
+        index_c = udev_device_get_sysattr_value (dev, "index");
+        if (index_c && atoi(index_c) == index)
+            break;
+
+        udev_device_unref (dev);
     }
+
+    if (!dev)
+        goto out;
 
     printf ("Device Node Path: %s, Name: %s\r\n",
             udev_device_get_devpath (dev),
@@ -51,6 +70,8 @@ int main()
     }
 
     udev_device_unref (dev);
+
+out:
     udev_unref (udev);
 
     return 0;
