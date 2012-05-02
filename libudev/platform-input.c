@@ -12,6 +12,19 @@ gcc -Wall -o platform-input -ggdb -ludev platform-input.c
 #include <libudev.h>
 #include <stdio.h>
 
+void
+list_properties (struct udev_device *dev)
+{
+    struct udev_list_entry *list;
+    struct udev_list_entry *node;
+
+    list = udev_device_get_properties_list_entry (dev);
+
+    udev_list_entry_foreach (node, list) {
+        printf ("%s: %s\n", udev_list_entry_get_name(node), udev_list_entry_get_value(node));
+    }
+}
+
 int main()
 {
     struct udev *udev;
@@ -30,6 +43,7 @@ int main()
 
     enumerate = udev_enumerate_new(udev);
     udev_enumerate_add_match_subsystem(enumerate, "input");
+    udev_enumerate_add_match_property (enumerate, "ID_INPUT_KEY", "1");
     udev_enumerate_scan_devices(enumerate);
     devices = udev_enumerate_get_list_entry(enumerate);
 
@@ -59,6 +73,7 @@ int main()
         printf("Parent's Subsystem: %s\n", udev_device_get_subsystem (parent_dev));
         printf("Grandparent's Driver: %s\n", udev_device_get_driver (grandparent_dev));
         printf("Grandparent's Subsystem: %s\n", udev_device_get_subsystem (grandparent_dev));
+        list_properties(dev);
 	printf("\n");
         udev_device_unref(dev);
     }
