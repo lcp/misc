@@ -8,22 +8,33 @@
 #include "pe.h"
 
 int
-print_32plus_header (data_directory *datadir, struct pe32plus_opt_hdr *pe)
+print_32plus_header (struct pe_hdr *pe_hdr, struct pe32plus_opt_hdr *pe32plus)
 {
-	printf ("text size:      %d\n", pe->text_size);
-	printf ("data size:      %d\n", pe->data_size);
-	printf ("bss  size:      %d\n", pe->bss_size);
-	printf ("entry point:    %d\n", pe->entry_point);
-	printf ("code base:      %d\n", pe->code_base);
-	printf ("image base:     %lld\n", pe->image_base);
-	printf ("section align:  %d\n", pe->section_align);
-	printf ("file align:     %d\n", pe->file_align);
-	printf ("image size:     %d\n", pe->image_size);
-	printf ("header size:    %d\n", pe->header_size);
-	printf ("stack size req: %lld\n", pe->stack_size_req);
-	printf ("stack size:     %lld\n", pe->stack_size);
-	printf ("heap size req:  %lld\n", pe->heap_size_req);
-	printf ("heap size:      %lld\n", pe->heap_size);
+	data_directory *datadir;
+	struct section_header *shdr, *scn_ptr;
+	size_t ddsize = 0;
+	int i, j;
+
+	ddsize = pe32plus->data_dirs;
+
+	datadir = (data_directory *)((char *)pe32plus + sizeof (struct pe32plus_opt_hdr));
+	shdr = (struct section_header *)((char *)datadir + (sizeof (data_dirent) * ddsize));
+
+	printf ("text size:      %d\n", pe32plus->text_size);
+	printf ("data size:      %d\n", pe32plus->data_size);
+	printf ("bss  size:      %d\n", pe32plus->bss_size);
+	printf ("entry point:    %d\n", pe32plus->entry_point);
+	printf ("code base:      %d\n", pe32plus->code_base);
+	printf ("image base:     %lld\n", pe32plus->image_base);
+	printf ("section align:  %d\n", pe32plus->section_align);
+	printf ("file align:     %d\n", pe32plus->file_align);
+	printf ("image size:     %d\n", pe32plus->image_size);
+	printf ("header size:    %d\n", pe32plus->header_size);
+	printf ("stack size req: %lld\n", pe32plus->stack_size_req);
+	printf ("stack size:     %lld\n", pe32plus->stack_size);
+	printf ("heap size req:  %lld\n", pe32plus->heap_size_req);
+	printf ("heap size:      %lld\n", pe32plus->heap_size);
+	printf ("data dirs:      %d\n", pe32plus->data_dirs);
 
 	printf ("\n== datadir ==\n");
 	printf ("exports size:   %d\n", datadir->exports.size);
@@ -38,6 +49,19 @@ print_32plus_header (data_directory *datadir, struct pe32plus_opt_hdr *pe)
 	printf ("cert addr:      %lld\n", datadir->certs.virtual_address);
 	printf ("reloc size:     %d\n", datadir->base_relocations.size);
 	printf ("reloc addr:     %lld\n", datadir->base_relocations.virtual_address);
+
+	printf ("\n== section header ==\n");
+	scn_ptr = shdr;
+	for (i = 0; i < pe_hdr->sections; i++) {
+		printf ("Sect[%d] name:   ", i+1);
+		for (j = 0; j < 8; j++)
+			putchar (scn_ptr->name[j]);
+		putchar ('\n');
+		printf ("Sect[%d] v_size: %d\n", i+1, scn_ptr->virtual_size);
+		printf ("Sect[%d] v_addr: %d\n", i+1, scn_ptr->virtual_address);
+		putchar ('\n');
+		scn_ptr += 1;
+	}
 }
 
 int
@@ -46,8 +70,6 @@ read_header (void *data)
 	struct mz_hdr *mz_hdr;
 	struct pe_hdr *pe_hdr;
 	struct pe32_opt_hdr *pe_o_hdr;
-	off_t hdr;
-	data_directory *dd;
 
 	mz_hdr = data;
 
@@ -63,8 +85,7 @@ read_header (void *data)
 		return -1;
 	}
 
-	hdr = mz_hdr->peaddr;
-	pe_o_hdr = (struct pe32_opt_hdr *)(data + hdr + sizeof(*pe_hdr));
+	pe_o_hdr = (struct pe32_opt_hdr *)((char *)pe_hdr + sizeof(struct pe_hdr));
 
 	switch (pe_o_hdr->magic) {
 		case PE_OPT_MAGIC_PE32:
@@ -72,8 +93,7 @@ read_header (void *data)
 			break;
 		case PE_OPT_MAGIC_PE32PLUS:
 			printf ("== pe32+ ==\n");
-			dd = (data_directory *)(data + hdr + sizeof(*pe_hdr) + sizeof (struct pe32plus_opt_hdr));
-			print_32plus_header (dd, (struct pe32plus_opt_hdr *)pe_o_hdr);
+			print_32plus_header (pe_hdr, (struct pe32plus_opt_hdr *)pe_o_hdr);
 			break;
 		case PE_OPT_MAGIC_PE32_ROM:
 			printf ("== pe32 ROM ==");
