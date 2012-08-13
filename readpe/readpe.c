@@ -27,10 +27,17 @@ print_32plus_header (data_directory *datadir, struct pe32plus_opt_hdr *pe)
 
 	printf ("\n== datadir ==\n");
 	printf ("exports size:   %d\n", datadir->exports.size);
+	printf ("exports addr:   %lld\n", datadir->exports.virtual_address);
 	printf ("imports size:   %d\n", datadir->imports.size);
+	printf ("imports addr:   %lld\n", datadir->imports.virtual_address);
 	printf ("resources size: %d\n", datadir->resources.size);
-	printf ("exceptions size:%d\n", datadir->exceptions.size);
+	printf ("resources addr: %lld\n", datadir->resources.virtual_address);
+	printf ("except size:    %d\n", datadir->exceptions.size);
+	printf ("except addr:    %lld\n", datadir->exceptions.virtual_address);
 	printf ("cert size:      %d\n", datadir->certs.size);
+	printf ("cert addr:      %lld\n", datadir->certs.virtual_address);
+	printf ("reloc size:     %d\n", datadir->base_relocations.size);
+	printf ("reloc addr:     %lld\n", datadir->base_relocations.virtual_address);
 }
 
 int
